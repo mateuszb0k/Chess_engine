@@ -5,6 +5,16 @@ const PIECE_KEYS = rand(UInt64,12,64)
 const SIDE_KEY = rand(UInt64)
 const CASTLE_KEYS = rand(UInt64,4)
 const ENPASANT_RIGHTS = rand(UInt64,8)
+const FILE_TO_INDEX = Dict(
+    FILE_A => 1,
+    FILE_B => 2,
+    FILE_C => 3,
+    FILE_D => 4,
+    FILE_E => 5,
+    FILE_F => 6,
+    FILE_G => 7,
+    FILE_H => 8
+)
 function piece_index(piece::Chess.Piece)
     ptype = Chess.ptype(piece)
     color = Chess.pcolor(piece)
@@ -59,7 +69,8 @@ function compute_hash(board::Chess.Board)
     ep_square=Chess.epsquare(board)
     if ep_square !=SQ_NONE
         file = Chess.file(ep_square)
-        h=xor(h,ENPASANT_RIGHTS[file])
+        file_idx = FILE_TO_INDEX[file]
+        h=xor(h,ENPASANT_RIGHTS[file_idx])
     end
     return h
 end

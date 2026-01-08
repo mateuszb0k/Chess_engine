@@ -1,7 +1,11 @@
 module Search
 using Chess
 include("Material.jl")
+include("Zobrist.jl")
+include("TranspositionTable.jl")
 using .Material
+using .Zobrist
+using .TranspositionTable
 const MATE_SCORE = 100000.0
 # function minimax_ab(board::Chess.Board,depth::Int,alpha::Float64,beta::Float64, is_maximizing::Bool)
 #     if depth ==0
@@ -59,33 +63,49 @@ function quiescence(board::Chess.Board,alpha::Float64,beta::Float64)
     end
     moves = Chess.moves(board)
     for move in moves
-        
+        #only captures
+        if Chess.pieceon(board,Chess.to(move))==EMPTY
+            continue
+        end
+        undo=Chess.domove!(board,move)
+        score = -quiescence(board,-beta,-alpha)
+        Chess.undomove!(board,undo)
+        if score>=beta
+            return beta
+        end
+        if score>alpha
+            alpha=score
+        end
     end
+    return alpha
 end
 function negamax(board::Chess.Board,depth::Int,alpha::Float64,beta::Float64)
+
+    hash = Zobrist.compute_hash(board)
+    tt_entry = TranspositionTable.lookup(hash)
+    if (!isnothing(tt_entry)) && tt_entry.depth>=depth
+        return tt_entry.score,tt_entry.best_move
+    end
+
     moves = Chess.moves(board)
     if isempty(moves)
         if Chess.ischeckmate(board)
-            return -MATE_SCORE + depth,nothing
+            return -MATE_SCORE,nothing
         elseif Chess.isstalemate(board)
             return 0.0,nothing
         end
     end
     if depth == 0
-        eval_score = Material.evaluate(board)
-        # Pamiętaj o negacji dla czarnych, jeśli evaluate zwraca z perspektywy białych
-        if Chess.sidetomove(board) == BLACK
-             eval_score = -eval_score
-        end
-        return eval_score, nothing
+        score = quiescence(board,alpha,beta)
+        return score, nothing
     end
     best_move = nothing
     best_score = -Inf
     for move in moves
-        new_board = deepcopy(board)
-        Chess.domove!(new_board,move)
-        score,_ = negamax(new_board,depth-1,-beta,-alpha)
+        undo = Chess.domove!(board,move)
+        score,_ = negamax(board,depth-1,-beta,-alpha)
         score =-score
+        Chess.undomove!(board,undo)
         if score>best_score
             best_score = score
             best_move = move
@@ -95,9 +115,15 @@ function negamax(board::Chess.Board,depth::Int,alpha::Float64,beta::Float64)
             break
         end
     end
+    TranspositionTable.store(hash,depth,best_score,best_move)
     return best_score,best_move
 end
 function search(board::Chess.Board,depth::Int)
-    return negamax(board,depth,-Inf,Inf)
+    TranspositionTable.clear()
+    score,best_move = negamax(board,depth,-Inf,Inf)
+    if Chess.sidetomove(board) == BLACK
+        score = -score
+    end
+    return score,best_move
 end
 end
