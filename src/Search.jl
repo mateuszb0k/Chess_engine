@@ -3,9 +3,13 @@ using Chess
 include("Material.jl")
 include("Zobrist.jl")
 include("TranspositionTable.jl")
+include("MoveOrdering.jl")
+include("OpeningBook.jl")
 using .Material
 using .Zobrist
 using .TranspositionTable
+using .MoveOrdering
+using .OpeningBook
 const MATE_SCORE = 100000.0
 # function minimax_ab(board::Chess.Board,depth::Int,alpha::Float64,beta::Float64, is_maximizing::Bool)
 #     if depth ==0
@@ -62,6 +66,7 @@ function quiescence(board::Chess.Board,alpha::Float64,beta::Float64)
         alpha = stand_pat
     end
     moves = Chess.moves(board)
+    moves = MoveOrdering.order_moves(board,moves)
     for move in moves
         #only captures
         if Chess.pieceon(board,Chess.to(move))==EMPTY
@@ -99,6 +104,7 @@ function negamax(board::Chess.Board,depth::Int,alpha::Float64,beta::Float64)
         score = quiescence(board,alpha,beta)
         return score, nothing
     end
+    moves = MoveOrdering.order_moves(board,moves)
     best_move = nothing
     best_score = -Inf
     for move in moves
@@ -118,12 +124,32 @@ function negamax(board::Chess.Board,depth::Int,alpha::Float64,beta::Float64)
     TranspositionTable.store(hash,depth,best_score,best_move)
     return best_score,best_move
 end
-function search(board::Chess.Board,depth::Int)
-    TranspositionTable.clear()
-    score,best_move = negamax(board,depth,-Inf,Inf)
-    if Chess.sidetomove(board) == BLACK
-        score = -score
+function search(board::Chess.Board,max_depth::Int,use_book::Bool=true,verbose::Bool=false)
+    if use_book
+        book_move = OpeningBook.get_book_move(board)
+        if book_move !==nothing
+            if verbose
+                println("Book move: $book_move" )
+            end
+            return 0.0,book_move
+        end
     end
-    return score,best_move
+    TranspositionTable.clear()
+    best_move =nothing
+    best_score =0.0
+    for depth in 1:max_depth
+        score,move = negamax(board,depth,-Inf,Inf)
+        if move!==nothing
+            best_move = move
+            best_score = score
+        end
+        if verbose
+            println("Depth $depth, Best_move $best_move, Best_score $best_score,")
+        end
+        if abs(best_score)>MATE_SCORE-1000
+            break
+        end
+    end
+    return best_score,best_move
 end
 end
