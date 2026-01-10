@@ -85,7 +85,6 @@ function quiescence(board::Chess.Board,alpha::Float64,beta::Float64)
     return alpha
 end
 function negamax(board::Chess.Board,depth::Int,alpha::Float64,beta::Float64)
-
     hash = Zobrist.compute_hash(board)
     tt_entry = TranspositionTable.lookup(hash)
     if (!isnothing(tt_entry)) && tt_entry.depth>=depth
