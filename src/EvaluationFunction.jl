@@ -297,7 +297,7 @@ function get_passed_bonus(rank::Int)
     rank == 7 && return WEIGHTS.passed_pawn_rank_7
     return 0.0  # rank 1 i 8 - niemożliwe dla pionków
 end
-NUM_WEIGHTS = length(WEIGHTS)
+NUM_WEIGHTS = 45
 function file_to_int(f)
         files = [FILE_A, FILE_B, FILE_C, FILE_D, FILE_E, FILE_F, FILE_G, FILE_H]
         for (i,file) in enumerate(files)
@@ -437,11 +437,10 @@ function piece_evaluation(board::Chess.Board)
         black_attacks=[]
         in_danger = false
         defended=false
-        for pawn in black_pawns
+        for pawn in squares(black_pawns)
             file = file_to_int(Chess.file(pawn))
             rank =rank_to_int(Chess.rank(pawn))
-            append!(black_attacks,Chess.pawnattacks(BLACK,Square((file - 1) * 8 + (8 - rank+1) + 1)))
-        end
+            append!(black_attacks, squares(Chess.pawnattacks(BLACK, Square((file - 1) * 8 + (8 - rank + 1) + 1))))        end
         if sq in white_defence
             defended = true
         else
@@ -475,8 +474,7 @@ function piece_evaluation(board::Chess.Board)
         for pawn in white_pawns
             file = file_to_int(Chess.file(pawn))
             rank =rank_to_int(Chess.rank(pawn))
-            append!(white_attacks,Chess.pawnattacks(WHITE,Square((file - 1) * 8 + (8 - rank-1) + 1)))
-        end
+            append!(white_attacks, squares(Chess.pawnattacks(WHITE, Square((file - 1) * 8 + (8 - rank - 1) + 1))))          end
         if sq in black_defence
             defended = true
         else
@@ -532,17 +530,17 @@ function piece_evaluation(board::Chess.Board)
     end
     ##connected rooks
     if length(white_rooks)>=2
-        if squares(white_rooks)[1] in Chess.rookattacks(board,squares(white_rooks)[2])
+        if (white_rooks)[1] in squares(Chess.rookattacks(board,(white_rooks)[2]))
             score+=WEIGHTS.connected_rooks
         end
     end
     if length(black_rooks)>=2
-        if squares(black_rooks)[1] in Chess.rookattacks(board,squares(black_rooks)[2])
+        if (black_rooks)[1] in squares(Chess.rookattacks(board,(black_rooks)[2]))
             score-=WEIGHTS.connected_rooks
         end
     end
     ##knight vs bishop open closed position
-    total_pawns = length(white_pawns)+length(black_pawns)
+    total_pawns = squarecount(white_pawns)+squarecount(black_pawns)
      #in a closed position knights are better
     if total_pawns>=12
         score+=WEIGHTS.knight_closed_bonus*(length(white_knights)-length(black_knights))
@@ -705,10 +703,10 @@ function king_safety(board::Chess.Board)
     ###PAWN SHIELD
     white_king_sq = squares(Chess.kings(board,WHITE))[1]
     black_king_sq = squares(Chess.kings(board,BLACK))[1]
-    white_pawns = squares(Chess.pawns(board,WHITE))
-    black_pawns = squares(Chess.pawns(board,BLACK))
-    white_king_zone = Chess.kingattacks(white_king_sq)
-    black_king_zone = Chess.kingattacks(black_king_sq)
+    white_pawns = (Chess.pawns(board,WHITE))
+    black_pawns = (Chess.pawns(board,BLACK))
+    white_king_zone = (Chess.kingattacks(white_king_sq))
+    black_king_zone = (Chess.kingattacks(black_king_sq))
     white_shield_count = squarecount(white_king_zone ∩ white_pawns)
     score += white_shield_count * WEIGHTS.pawn_shield_close
     #max 3 pawns
