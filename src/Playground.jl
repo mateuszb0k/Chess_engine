@@ -50,7 +50,9 @@ end
 # println(Chess.pawns(b))
 # println(b)
 # println(b)
-board = Chess.fromfen("8/2p5/3p4/3P4/8/8/8/8 w - - 0 1")
+board = Chess.fromfen("rnbqkbnr/pp1p1Qp1/2p4p/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4")
+println(Chess.ischeckmate(board))
+println(Chess.sidetomove(board))
 
 white_pawn_files,black_pawn_files,white_pawn_squares,black_pawn_squares=get_pawn_info(board)
 white_pawn_ranks = Dict{Int, Vector{Int}}()

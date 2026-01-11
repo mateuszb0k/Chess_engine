@@ -121,7 +121,7 @@ for (name, fen) in positions
     board = fromfen(fen)
     Search.reset_stats!()
     start = time()
-    score, move = Search.search_parallel(board, 5, use_book=false, verbose=false)
+    score, move = Search.search_parallel(board, 15, use_book=false, verbose=false)
     elapsed = time() - start
     nodes = Search.STATS.nodes[]
     nps = round(Int, nodes / elapsed)
