@@ -33,7 +33,7 @@ end
 function Individual(genes::Vector{Float64})
     return Individual(genes,0.0,0,0,0,0)
 end
-function random_individual(genes::Vector{Float64})
+function random_individual(config::GAConfig)
     default = EvaluationFunction.weights_to_vector(EvaluationFunction.default_weights())
     genes = copy(default)
     for i in eachindex(genes)
@@ -107,6 +107,7 @@ function crossover(parent1::Individual,parent2::Individual,config::GAConfig)
     #tutorials point whole arithmetic recombination
     genes1 = parent1.genes .* alpha + parent2.genes .* (1-alpha)
     genes2 = parent2.genes .*alpha + parent1.genes .* (1-alpha)
+    return Individual(genes1),Individual(genes2)
 end
 function mutate!(ind::Individual,config::GAConfig)
     for i in eachindex(ind.genes)
@@ -115,9 +116,10 @@ function mutate!(ind::Individual,config::GAConfig)
             ind.genes[i] = clamp(ind.genes[i]*change,config.min_weights,config.max_weights)
         end
     end
+    
 end
 #fitness
-function check_game_result(board::Chess.Board,color_perspective::Chess.Color,moves_count::Int,max_moves::Int)
+function check_game_result(board::Chess.Board,color_perspective,moves_count::Int,max_moves::Int)
     if isempty(Chess.moves(board))
         if Chess.ischeckmate(board)
             return Chess.sidetomove(board) != color_perspective ? 1.0 : 0.0
@@ -143,6 +145,7 @@ function play_game(white_genes::Vector{Float64},black_genes::Vector{Float64},fen
     board = Chess.fromfen(fen)
     moves_count = 0
     w_weights = EvaluationFunction.vector_to_weights(white_genes)
+    b_weights = EvaluationFunction.vector_to_weights(black_genes)
     black_pawn_files = EvaluationFunction.vector_to_weights(black_genes)
     while moves_count<config.max_moves_per_game
         turn = Chess.sidetomove(board)
@@ -151,7 +154,7 @@ function play_game(white_genes::Vector{Float64},black_genes::Vector{Float64},fen
         else
             EvaluationFunction.set_weights!(b_weights)
         end
-        score,move = Search.search_parallel(board,config.search_depth,false,false)
+        score,move = Search.search_parallel(board, config.search_depth, use_book=false, verbose=false)
         if move===nothing
             break
         end
@@ -183,7 +186,7 @@ function evaluate_population!(population::Vector{Individual},config::GAConfig)
                 result =1.0-white_score
             end
             points+=result
-            ind.games_plated +=1
+            ind.games_played +=1
             if result == 1.0 ind.wins+=1
             elseif result==0.5 ind.draws+=1
             elseif result ==0.0 ind.losses+=1
@@ -200,7 +203,7 @@ function optimize(config::GAConfig)
     for gen in 1:config.generations
         println("------------ Gen $gen -------")
         evaluate_population!(population,config)
-        sort!(populaiton, by= x->x.fitness,rev = true)
+        sort!(population, by= x->x.fitness,rev = true)
         if population[1].fitness>best_ever.fitness
             best_ever = deepcopy(population[1])
             println("New best found: fitness = $(best_ever.fitness)")
