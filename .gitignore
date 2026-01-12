@@ -1,3 +1,7 @@
 src/Playground.jl
 src/test.jl
 
+src/UCI.jl
+src/run_engine.sh
+src/gui_debug.log
+src/debug_uci.txt
