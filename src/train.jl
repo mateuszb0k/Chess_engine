@@ -4,11 +4,12 @@ include("GeneticOptimizer.jl")
 include("EvaluationFunction.jl")
 using .GeneticOptimizer
 using .EvaluationFunction
+using Serialization
 config = GeneticOptimizer.GAConfig(
-    population_size=20,
-    generations = 30,
-    games_per_fitness = 8,
-    search_depth = 3,
+    population_size=15,
+    generations = 20,
+    games_per_fitness = 20,
+    search_depth = 2,
     max_moves_per_game=50,
     mutation_rate=0.2
 )
@@ -18,3 +19,5 @@ println("Optimization finished")
 println("Best fitness: $(best_ind.fitness)")
 best_weights = EvaluationFunction.vector_to_weights(best_ind.genes)
 println(best_weights)
+serialize("best_weights.jls", best_weights)
+println("Saved weights into 'best_weights.jls'")

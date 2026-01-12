@@ -99,8 +99,8 @@ function tournament_selection(population::Vector{Individual},config::GAConfig)
     end
     return best
 end
-function crossover(parent1::Individual,parent2::Individual,config::GAConfig)
-    if rand() > config.crossover_rate
+function crossover(parent1::Individual,parent2::Individual,current_rate::Float64,config::GAConfig)
+    if rand() > current_rate
         return Individual(copy(parent1.genes)),Individual(copy(parent2.genes))
     end
     alpha = rand()
@@ -204,6 +204,11 @@ function optimize(config::GAConfig)
         println("------------ Gen $gen -------")
         evaluate_population!(population,config)
         sort!(population, by= x->x.fitness,rev = true)
+        if population[1].fitness>=best_ever.fitness
+            current_gen_crossover_rate = min(1.0, config.crossover_rate + 0.2)
+        else
+            current_gen_crossover_rate = config.crossover_rate
+        end
         if population[1].fitness>best_ever.fitness
             best_ever = deepcopy(population[1])
             println("New best found: fitness = $(best_ever.fitness)")
@@ -219,7 +224,7 @@ function optimize(config::GAConfig)
         while length(new_population) < config.population_size
             parent1 = tournament_selection(population,config)
             parent2= tournament_selection(population,config)
-            child1,child2 = crossover(parent1,parent2,config)
+            child1,child2 = crossover(parent1,parent2,current_gen_crossover_rate,config)
             mutate!(child1,config)
             mutate!(child2,config)
             push!(new_population,child1)
