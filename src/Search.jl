@@ -13,6 +13,7 @@ using .MoveOrdering
 using .OpeningBook
 const MATE_SCORE = 100000.0
 const MAX_DEPTH = 32
+const INFINITY = 1_000_000.0
 mutable struct SearchStats
     nodes::Atomic{Int64}
     tt_hits::Atomic{Int64}
@@ -152,7 +153,7 @@ function negamax(board::Chess.Board,depth::Int,alpha::Float64,beta::Float64,ply:
     #terminal node check
     moves = Chess.moves(board)
     if isempty(moves)
-        if Chess.ischeck(board)
+        if Chess.ischeckmate(board)
             return -MATE_SCORE + ply, nothing
         else
             return 0.0,nothing
@@ -186,7 +187,7 @@ function negamax(board::Chess.Board,depth::Int,alpha::Float64,beta::Float64,ply:
     #search moves
 
     best_move =moves[1]
-    best_score= -Inf
+    best_score= -INFINITY
     flag = TranspositionTable.UPPER_BOUND
     for (i,move) in enumerate(moves)
         undo = Chess.domove!(board,move)
@@ -242,11 +243,11 @@ end
             adjusted_depth=depth + (thread_id%3)-1
             adjusted_depth=max(1,adjusted_depth)
         end
-        score,move=negamax(board,adjusted_depth,-Inf,Inf,0)
+        score,move=negamax(board,adjusted_depth,-INFINITY,INFINITY,0)
         put!(results,SearchResult(score,move,adjusted_depth,thread_id))
     end
     function search_parallel(board::Chess.Board,max_depth::Int;
-        use_book::Bool=true,verbose::Bool=false,time_limit::Float64=Inf,num_threads::Int=Threads.nthreads())
+        use_book::Bool=true,verbose::Bool=false,time_limit::Float64=INFINITY,num_threads::Int=Threads.nthreads())
         if use_book
             book_move=OpeningBook.get_book_move(board)
             if book_move !==nothing

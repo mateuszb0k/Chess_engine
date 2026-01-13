@@ -54,9 +54,9 @@ function score_move(board::Chess.Board,move::Chess.Move,tt_move::Union{Chess.Mov
         score+=5
     end
     #penalty for moving to attacked suqre
-    if Chess.isattacked(board,to_sq,Chess.sidetomove(board)== WHITE ? BLACK : WHITE )
-        score-=50
-    end
+    # if Chess.isattacked(board,to_sq,Chess.sidetomove(board)== WHITE ? BLACK : WHITE )
+    #     score-=50
+    # end
     return score
 end
 # function score_move(board::Chess.Board,move::Chess.Move)

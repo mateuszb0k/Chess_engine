@@ -12,14 +12,13 @@ using .EvaluationFunction
 
 function play_simple()
     #weights
-    if isfile("best_weights.jls")
-        try
-            weights = deserialize("best_weights.jls")
-            EvaluationFunction.set_weights!(weights)
-            println("Weights loaded")
-        catch
-            println("Weights loading error.")
-        end
+    txt_dir = "best_weights_t2.txt"
+    if isfile(txt_dir)
+        println("Loading weights from best_weights.txt")
+        new_weights = EvaluationFunction.load_weights_from_txt(txt_dir)
+        println("Weights Loaded")
+    else
+        println("No file found, using default")
     end
 
     board = Chess.startboard()
@@ -33,6 +32,7 @@ function play_simple()
             if Chess.ischeckmate(
                println("CHECKMATE") 
             )
+            end
             println("DRAW")
             break
         end
@@ -55,7 +55,7 @@ function play_simple()
 
         else
             println("Engine is thinking...")
-            score, best_move = Search.search_parallel(board, 20, use_book=true, verbose=false, num_threads=Base.Threads.nthreads())
+            score, best_move = Search.search_parallel(board, 5, use_book=true, verbose=true, num_threads=Base.Threads.nthreads())
             
             if best_move !== nothing
                 println("Engine move: $(Chess.tostring(best_move))")
@@ -67,6 +67,4 @@ function play_simple()
         end
     end
 end
-
-# Automatyczny start po załadowaniu
 play_simple()

@@ -4,7 +4,7 @@ const BOOK = Dict(
     # start
     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq -" => ["e2e4", "d2d4", "c2c4", "g1f3"],
     # e4
-    "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -" => ["e7e5", "c7c5", "e7e6", "c7c6"],
+    "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq -" => ["e7e5", "c7c5"],
     # d4
     "rnbqkbnr/pppppppp/8/8/3P4/8/PPP1PPPP/RNBQKBNR b KQkq -" => ["d7d5", "g8f6", "e7e6"], 
     # e4,e5
@@ -29,14 +29,17 @@ const BOOK = Dict(
 function get_book_move(board::Chess.Board)
     fen_full = Chess.fen(board)
     if haskey(BOOK,fen_full)
+        println("found the position in the book")
         moves_str = BOOK[fen_full]
         move_str = rand(moves_str)
         legal_moves = Chess.moves(board)
         for m in legal_moves
-            if lowercase(string(m))==lowercase(move_str)
+            if lowercase(Chess.tostring(m))==lowercase(move_str)
                 return m
             end
         end
+    else
+        println("position not found")
     end
     return nothing
 end

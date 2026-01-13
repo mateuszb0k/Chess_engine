@@ -167,6 +167,71 @@ function play_game(white_genes::Vector{Float64},black_genes::Vector{Float64},fen
     end
     return 0.5
 end
+function play_demo_game(genes::Vector{Float64}, config::GAConfig)
+    println("\n>>> PLAYING DEMO GAME (Best vs Best) <<<")
+    board = Chess.startboard()
+    moves_count = 0
+    weights = EvaluationFunction.vector_to_weights(genes)
+    EvaluationFunction.set_weights!(weights) 
+    
+    pgn_string = ""
+    
+    while moves_count < 150 # Zwiększyłem limit, żeby nie ucinało
+        moves_count += 1
+        turn_num = ceil(Int, moves_count / 2)
+        
+        # 1. Numer ruchu (tylko dla białych)
+        if moves_count % 2 != 0
+            pgn_string *= "$turn_num. "
+        end
+
+        score, move = Search.search_parallel(board, config.search_depth, use_book=true, verbose=false)
+        
+        if move === nothing
+            println("No move found.")
+            break
+        end
+        
+        # --- ZMIANA: UŻYWAMY SAN (np. Nf3 zamiast g1f3) ---
+        try
+            move_san = Chess.san(board, move)
+            pgn_string *= "$move_san "
+            print("$move_san ") 
+        catch e
+            # Fallback gdyby san() rzuciło błąd (rzadkie)
+            move_str = Chess.tostring(move)
+            pgn_string *= "$move_str "
+            print("$move_str ")
+        end
+        # --------------------------------------------------
+        
+        Chess.domove!(board, move)
+        
+        if Chess.ischeckmate(board)
+            println("\nCheckmate!")
+            # Wynik w PGN zależy od tego czyj ruch (kto dostał mata)
+            result = (moves_count % 2 != 0) ? "1-0" : "0-1"
+            # Nadpisujemy wynik w nagłówku później, tutaj kończymy stringa
+            break
+        elseif Chess.isdraw(board)
+            println("\nDraw!")
+            pgn_string *= "1/2-1/2"
+            break
+        end
+    end
+    println("\nGame Over.")
+    
+    open("last_game.pgn", "w") do io
+        println(io, "[Event \"Training Demo Game\"]")
+        println(io, "[Site \"Localhost\"]")
+        println(io, "[White \"BestBot\"]")
+        println(io, "[Black \"BestBot\"]")
+        println(io, "[Result \"*\"]") # Gwiazdka oznacza nieznany/inny wynik, można edytować ręcznie
+        println(io, "")
+        println(io, pgn_string)
+    end
+    println(">>> Demo game saved to 'last_game.pgn' (SAN format) <<<")
+end
 function evaluate_population!(population::Vector{Individual},config::GAConfig)
     baseline = default_individual()
     println("Starting evaluation of $(length(population)) individuals")
@@ -196,10 +261,27 @@ function evaluate_population!(population::Vector{Individual},config::GAConfig)
     end
     println("Evaluation Complete")
 end
-function optimize(config::GAConfig)
-    population = [random_individual(config) for _ in 1:config.population_size]
-    population[1] = default_individual()
-    best_ever = population[1]
+function optimize(config::GAConfig;start_genes::Vector{Float64}=Float64[])
+    # population = [random_individual(config) for _ in 1:config.population_size]
+    # population[1] = default_individual()
+    # best_ever = population[1]
+    population = Vector{Individual}()
+    println("DEBUG: Received start_genes length: $(length(start_genes))")
+    if !isempty(start_genes)
+        println("Loaded previous weights")
+        push!(population,Individual(copy(start_genes)))
+        for _ in 2:config.population_size
+            ind = Individual(copy(start_genes))
+            mutate!(ind, config)
+            push!(population, ind)
+        end
+        best_ever = population[1]
+    else
+        println("Default weights")
+        population = [random_individual(config) for _ in 1:config.population_size]
+        population[1] = default_individual()
+        best_ever = population[1]
+    end
     for gen in 1:config.generations
         println("------------ Gen $gen -------")
         evaluate_population!(population,config)
@@ -215,6 +297,14 @@ function optimize(config::GAConfig)
             println("Stats wins: $(best_ever.wins), draws: $(best_ever.draws), losses: $(best_ever.losses)")
         end
         println("Best in gen $gen: $(population[1].fitness) pts")
+        if gen%2==0
+            println("Checkpoint: Saving best wweights to best_weights$gen.txt")
+            open("best_weights$gen.txt","w") do io
+                for w in (best_ever.genes)
+                    println(io,w)
+                end
+            end
+        end
         #elitism 
         new_population = Vector{Individual}()
         for i in 1:config.elitism_count
@@ -234,6 +324,7 @@ function optimize(config::GAConfig)
         end
         population  = new_population
     end
+    play_demo_game(best_ever.genes, config)
     return best_ever
 end
 export optimize,GAConfig

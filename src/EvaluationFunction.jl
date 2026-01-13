@@ -226,6 +226,19 @@ WEIGHTS = default_weights()
 function set_weights!(weights::EvalWeights)
     global WEIGHTS = weights
 end
+function load_weights_from_txt(filename::String)
+    try
+        lines = readlines(filename)
+        values = [parse(Float64,strip(l)) for l in lines if !isempty(strip(l))]
+        if length(values) != NUM_WEIGHTS
+            println("File error number of weights expected $NUM_WEIGHTS num weights in the file $(length(values))")
+        end
+        return vector_to_weights(values)
+    catch ex
+        println(stderr,"Error reading file using default weights")
+        return default_weights()
+    end
+end
 function weights_to_vector(w::EvalWeights)
     return Float64[
         w.pst_weight,
@@ -855,4 +868,5 @@ export trapped_pieces, king_safety
 export center_control, space_advantage, king_activity_endgame
 export EvalWeights, default_weights, set_weights!, WEIGHTS
 export weights_to_vector, vector_to_weights, NUM_WEIGHTS
+export load_weights_from_txt
 end#module

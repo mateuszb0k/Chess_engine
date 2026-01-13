@@ -108,7 +108,7 @@ println("TEST 6: PERFORMANCE BENCHMARK")
 println("="^70)
 
 positions = [
-    ("Opening", "rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1"),
+    ("Opening", "rnbqkbnr/pppp1ppp/8/4p3/4P3/2N5/PPPP1PPP/R1BQKBNR b KQkq - 1 2"),
     ("Middlegame", "r1bq1rk1/ppp2ppp/2np1n2/2b1p3/2B1P3/2NP1N2/PPP2PPP/R1BQ1RK1 w - - 0 1"),
     ("Endgame", "8/5pk1/5p1p/8/8/5P1P/5PK1/8 w - - 0 1"),
 ]
@@ -121,10 +121,10 @@ for (name, fen) in positions
     board = fromfen(fen)
     Search.reset_stats!()
     start = time()
-    score, move = Search.search_parallel(board, 15, use_book=false, verbose=false)
+    score, move = Search.search_parallel(board, 6, use_book=false, verbose=false)
     elapsed = time() - start
     nodes = Search.STATS.nodes[]
-    nps = round(Int, nodes / elapsed)
+    nps = round(Int, nodes / (elapsed+1e-9))
     global total_nodes += nodes
     global total_time += elapsed
     println("  $name: $move | $(round(elapsed, digits=2))s | $nodes nodes | $nps NPS")
