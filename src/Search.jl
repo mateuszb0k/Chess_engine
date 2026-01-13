@@ -38,6 +38,17 @@ end
 ###quiescence
 function quiescence(board::Chess.Board,alpha::Float64,beta::Float64,depth::Int=0)
     add_nodes!()
+    if Chess.isdraw(board)
+        return 0.0
+    end
+    moves = Chess.moves(board)
+    if isempty(moves)
+        if Chess.ischeckmate(board)
+            return -MATE_SCORE  
+        else
+            return 0.0  
+        end
+    end
     stand_pat = EvaluationFunction.evaluate(board)
     if stand_pat >= beta
         return beta
@@ -48,7 +59,6 @@ function quiescence(board::Chess.Board,alpha::Float64,beta::Float64,depth::Int=0
     if depth>10
         return alpha
     end
-    moves = Chess.moves(board)
     for move in moves
         #only captures
         captured = Chess.pieceon(board,Chess.to(move))
@@ -190,11 +200,13 @@ function negamax(board::Chess.Board,depth::Int,alpha::Float64,beta::Float64,ply:
     best_score= -INFINITY
     flag = TranspositionTable.UPPER_BOUND
     for (i,move) in enumerate(moves)
+        captured = Chess.pieceon(board,Chess.to(move))
+        is_capture = (captured!=EMPTY)
         undo = Chess.domove!(board,move)
-
+        is_check_after = Chess.ischeck(board)
         #late move reduction
         reduction = 0
-        if i>4 && depth>=3 && !Chess.ischeck(board) && Chess.pieceon(board,Chess.to(move))==EMPTY
+        if i>4 && depth>=3 && !is_check_after && !is_capture
             reduction = 1
             if i>10
                 reduction =2
@@ -225,9 +237,10 @@ function negamax(board::Chess.Board,depth::Int,alpha::Float64,beta::Float64,ply:
             flag = TranspositionTable.LOWER_BOUND
             break
         end
-        TranspositionTable.store(hash,depth,best_score,best_move,flag)
+        
         
     end
+    TranspositionTable.store(hash,depth,best_score,best_move,flag)
     return best_score,best_move
 end
     struct SearchResult
@@ -262,7 +275,7 @@ end
         best_score = 0.0
         start_time = time()
         if verbose
-            println("Parallel serch with $num_threads threads")
+            println("Parallel search with $num_threads threads")
         end
         
         for depth in 1:max_depth
@@ -279,7 +292,7 @@ end
             close(results)
             for result in results
                 if result.move !== nothing
-                    if result.depth>=depth && (best_move === nothing || result.score>best_score)
+                    if best_move === nothing || (result.depth == depth && result.score > best_score) || (result.depth > depth)
                         best_score = result.score
                         best_move = result.move
                     end

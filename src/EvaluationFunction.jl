@@ -85,6 +85,9 @@ const PIECE_VALUES = Dict(
     QUEEN => 900,
     KING => 20000
 )
+function int_to_square(file::Int, rank::Int)
+    return Square((file - 1) * 8 + (9 - rank))
+end
 mutable struct EvalWeights
 
     #PST
@@ -330,19 +333,30 @@ function rank_to_int(r)
     return 0
 end
 function is_end_game(board::Chess.Board)
-    queens = 0
-    # minor_major=0
-    for i in 1:64
-       piece = Chess.pieceon(board,Chess.Square(i))
-       piece_type = Chess.ptype(piece)
-       if piece_type==QUEEN
-            queens+=1
-       end
-    #    if piece_type in [ROOK,BISHOP,KNIGHT]
-    #     minor_major+=1
+    # queens = 0
+    # # minor_major=0
+    # for i in 1:64
+    #    piece = Chess.pieceon(board,Chess.Square(i))
+    #    piece_type = Chess.ptype(piece)
+    #    if piece_type==QUEEN
+    #         queens+=1
     #    end
+    # #    if piece_type in [ROOK,BISHOP,KNIGHT]
+    # #     minor_major+=1
+    # #    end
+    # end
+    # return queens == 0
+    queens = squarecount(Chess.queens(board, WHITE)) + squarecount(Chess.queens(board, BLACK))
+    white_material = count_material(board, WHITE)
+    black_material = count_material(board, BLACK)
+    if queens == 0
+        return true
     end
-    return queens == 0
+    if queens>0 && white_material < 1600 && black_material < 1600
+        return true
+    end
+    return false
+
 end
 function count_material(board::Chess.Board,color)
     total = 0
@@ -350,7 +364,7 @@ function count_material(board::Chess.Board,color)
         piece = Chess.pieceon(board,Chess.Square(i))
         if piece != EMPTY && Chess.pcolor(piece) == color
             piece_type = Chess.ptype(piece)
-            if ptype != KING
+            if piece_type != KING
                 total += get(PIECE_VALUES,piece_type,0)
             end
         end
@@ -385,7 +399,7 @@ function material_and_pst(board::Chess.Board)
         file_idx = file_to_int(Chess.file(sq))
         rank_idx = rank_to_int(Chess.rank(sq))
         #pst if white pawn is on rank 2 we need to take the values from 7 row of the pst
-        table_row = p_color == WHITE ? 9-rank_idx : rank_idx
+        table_row = p_color == WHITE ?  rank_idx : 9-rank_idx
         pst_value=0
         if p_type ==PAWN
             pst_value = PST_PAWN[table_row,file_idx]
@@ -423,6 +437,8 @@ function piece_evaluation(board::Chess.Board)
     if length(black_bishops)>=2
         score-=WEIGHTS.bishop_pair_bonus
     end
+    
+
 
     #weak bishops
     # for sq in white_bishops
@@ -445,25 +461,31 @@ function piece_evaluation(board::Chess.Board)
         file = file_to_int(Chess.file(sq))
         rank = rank_to_int(Chess.rank(sq))
         white_pawns=Chess.pawns(board,WHITE)
-        white_defence = [Chess.pawnattacks(WHITE,pawn) for pawn in squares(white_pawns)]
+        white_pawn_attacks = SquareSet()
+        for pawn in squares(white_pawns)
+            white_pawn_attacks = union(white_pawn_attacks, Chess.pawnattacks(WHITE, pawn))
+        end
         black_pawns=Chess.pawns(board,BLACK)
-        black_attacks=[]
+        black_attacks_future=SquareSet()
+        black_attacks = SquareSet()
         in_danger = false
         defended=false
         for pawn in squares(black_pawns)
-            file = file_to_int(Chess.file(pawn))
-            rank =rank_to_int(Chess.rank(pawn))
-            append!(black_attacks, squares(Chess.pawnattacks(BLACK, Square((file - 1) * 8 + (8 - rank + 1) + 1))))        end
-        if sq in white_defence
-            defended = true
-        else
-            defended = false
+            file_p = file_to_int(Chess.file(pawn))
+            rank_p =rank_to_int(Chess.rank(pawn))
+            #black_attacks |=Chess.pawnattacks(BLACK,pawn)
+            black_attacks = union(black_attacks, Chess.pawnattacks(BLACK, pawn))
+            if rank_p>1
+                next_rank = rank_p-1
+                next_sq = int_to_square(file_p,next_rank)
+                # black_attacks_future |= Chess.pawnattacks(BLACK,next_sq)
+                black_attacks_future = union(black_attacks_future,Chess.pawnattacks(BLACK,next_sq))
+            end
+            # append!(black_attacks_future, squares(Chess.pawnattacks(BLACK, Square((file - 1) * 8 + (8 - rank + 1) + 1))))
         end
-        if sq in black_attacks
-            in_danger =true
-        else
-            in_danger = false
-        end
+        black_all_attacks = union(black_attacks, black_attacks_future)
+        defended = sq in squares(white_pawn_attacks)
+        in_danger = sq in squares(black_all_attacks)
         if (rank>=4 && rank<=6)&&(file>=3&&file<=6)
             if defended && !in_danger
                 score+=WEIGHTS.knight_outpost_defended_safe
@@ -478,35 +500,45 @@ function piece_evaluation(board::Chess.Board)
     for sq in black_knights
         file = file_to_int(Chess.file(sq))
         rank = rank_to_int(Chess.rank(sq))
-        white_pawns=Chess.pawns(board,WHITE)
-        black_pawns=Chess.pawns(board,BLACK)
-        black_defence = [Chess.pawnattacks(BLACK,pawn) for pawn in squares(black_pawns)]
-        white_attacks=[]
-        in_danger = false
-        defended=false
-        for pawn in white_pawns
-            file = file_to_int(Chess.file(pawn))
-            rank =rank_to_int(Chess.rank(pawn))
-            append!(white_attacks, squares(Chess.pawnattacks(WHITE, Square((file - 1) * 8 + (8 - rank - 1) + 1))))          end
-        if sq in black_defence
-            defended = true
-        else
-            defended = false
+        
+        black_pawns = Chess.pawns(board, BLACK)
+        black_pawn_attacks = SquareSet()
+        for pawn in squares(black_pawns)
+            black_pawn_attacks = union(black_pawn_attacks, Chess.pawnattacks(BLACK, pawn))  
         end
-        if sq in white_attacks
-            in_danger =true
-        else
-            in_danger = false
-        end
-        if (rank>=3 && rank<=5)&&(file>=3&&file<=6)
-            if defended && !in_danger
-                score-=WEIGHTS.knight_outpost_defended_safe
-            elseif defended
-                score-=WEIGHTS.knight_outpost_defended
-            elseif !in_danger
-                score-=WEIGHTS.knight_outpost_safe
-            end
+        
+        white_pawns = Chess.pawns(board, WHITE)
+        white_attacks = SquareSet()
+        white_attacks_future = SquareSet()
+        
+        for pawn in squares(white_pawns)
+            file_p = file_to_int(Chess.file(pawn))
+            rank_p = rank_to_int(Chess.rank(pawn))
             
+            white_attacks = union(white_attacks, Chess.pawnattacks(WHITE, pawn))  
+
+            
+            if rank_p < 8
+                next_rank = rank_p + 1
+                next_sq = int_to_square(file_p, next_rank)
+                white_attacks_future = union(white_attacks_future, Chess.pawnattacks(WHITE, next_sq))  
+
+            end
+        end
+        
+        white_all_attacks = union(white_attacks, white_attacks_future)
+        
+        defended = sq in squares(black_pawn_attacks)
+        in_danger = sq in squares(white_all_attacks)
+        
+        if (rank >= 3 && rank <= 5) && (file >= 3 && file <= 6)
+            if defended && !in_danger
+                score -= WEIGHTS.knight_outpost_defended_safe
+            elseif defended
+                score -= WEIGHTS.knight_outpost_defended
+            elseif !in_danger
+                score -= WEIGHTS.knight_outpost_safe
+            end
         end
     end
     #rooks open files halfopen files
@@ -684,15 +716,31 @@ function trapped_pieces(board::Chess.Board)
     end
     ##trapped knight
     for sq in white_knights
-        mobility = squarecount(Chess.knightattacks(sq))
-        if mobility<=2
+        legal_moves =0
+        # mobility = squarecount(Chess.knightattacks(sq))
+        # if mobility<=2
+        #     score-=WEIGHTS.trapped_knight
+        # end
+        for target_sq in squares(Chess.knightattacks(sq))
+            target_piece = Chess.pieceon(board,target_sq)
+            if target_piece == EMPTY || Chess.pcolor(target_piece) == BLACK
+                legal_moves+=1
+            end
+        end
+        if legal_moves<=2
             score-=WEIGHTS.trapped_knight
         end
     end
     for sq in black_knights
-        mobility = squarecount(Chess.knightattacks(sq))
-        if mobility<=2
-            score+=WEIGHTS.trapped_knight
+        legal_moves = 0
+        for target_sq in squares(Chess.knightattacks(sq))
+            target_piece = Chess.pieceon(board, target_sq)
+            if target_piece == EMPTY || Chess.pcolor(target_piece) == WHITE
+                legal_moves += 1
+            end
+        end
+        if legal_moves <= 2
+            score += WEIGHTS.trapped_knight
         end
     end
     ##trapped queen
@@ -723,11 +771,13 @@ function king_safety(board::Chess.Board)
     white_shield_count = squarecount(white_king_zone ∩ white_pawns)
     score += white_shield_count * WEIGHTS.pawn_shield_close
     #max 3 pawns
-    missing_shield_w = 3-white_shield_count
+    max_possible_shield = min(3,squarecount(white_king_zone))
+    missing_shield_w = max_possible_shield-white_shield_count
     missing_shield_w>0 && (score-=missing_shield_w*WEIGHTS.pawn_shield_missing)
     black_shield_count = squarecount(black_king_zone ∩ black_pawns)
     score -= black_shield_count * WEIGHTS.pawn_shield_close
-    missing_shield_b = 3-black_shield_count
+    max_possible_shield_b = min(3, squarecount(black_king_zone))
+    missing_shield_b = max_possible_shield_b-black_shield_count
     missing_shield_b>0 && (score+=missing_shield_b*WEIGHTS.pawn_shield_missing)
     ##KING TROPISM
     for sq in squares(Chess.queens(board,BLACK))
