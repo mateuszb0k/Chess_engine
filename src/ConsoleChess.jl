@@ -3,7 +3,6 @@ Pkg.activate(".")
 using Chess
 using Serialization
 
-# Import modułów silnika
 include("Search.jl")
 include("EvaluationFunction.jl")
 include("OpeningBook.jl")
