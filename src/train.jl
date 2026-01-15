@@ -6,15 +6,15 @@ using .GeneticOptimizer
 using .EvaluationFunction
 using Serialization
 config = GeneticOptimizer.GAConfig(
-    population_size=20, 
-    generations = 20,
-    games_per_fitness = 25,
+    population_size=15, 
+    generations = 30,
+    games_per_fitness = 30,
     search_depth = 5,
     max_moves_per_game=50,
     mutation_rate=0.2
 )
 start_genes = Float64[]
-weights_file = "best_weights2.txt"
+weights_file = "best_weights_t2.txt"
 if isfile(weights_file)
     println("Weights found $weights_file ")
     try
@@ -35,7 +35,7 @@ println("Optimization finished")
 println("Best fitness: $(best_ind.fitness)")
 println("Wins: $(best_ind.wins), Draws: $(best_ind.draws), Losses:$(best_ind.losses)") 
 println("Saving final best weights to 'best_weights.txt'...")
-open("best_weights_t2.txt", "w") do io
+open("best_weights_t3.txt", "w") do io
     for w in best_ind.genes
         println(io, w)
     end
