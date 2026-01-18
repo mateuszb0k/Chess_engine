@@ -176,11 +176,10 @@ function play_demo_game(genes::Vector{Float64}, config::GAConfig)
     
     pgn_string = ""
     
-    while moves_count < 150 # Zwiększyłem limit, żeby nie ucinało
+    while moves_count < 150 
         moves_count += 1
         turn_num = ceil(Int, moves_count / 2)
         
-        # 1. Numer ruchu (tylko dla białych)
         if moves_count % 2 != 0
             pgn_string *= "$turn_num. "
         end
@@ -192,13 +191,11 @@ function play_demo_game(genes::Vector{Float64}, config::GAConfig)
             break
         end
         
-        # --- ZMIANA: UŻYWAMY SAN (np. Nf3 zamiast g1f3) ---
         try
             move_san = Chess.san(board, move)
             pgn_string *= "$move_san "
             print("$move_san ") 
         catch e
-            # Fallback gdyby san() rzuciło błąd (rzadkie)
             move_str = Chess.tostring(move)
             pgn_string *= "$move_str "
             print("$move_str ")
@@ -209,9 +206,7 @@ function play_demo_game(genes::Vector{Float64}, config::GAConfig)
         
         if Chess.ischeckmate(board)
             println("\nCheckmate!")
-            # Wynik w PGN zależy od tego czyj ruch (kto dostał mata)
             result = (moves_count % 2 != 0) ? "1-0" : "0-1"
-            # Nadpisujemy wynik w nagłówku później, tutaj kończymy stringa
             break
         elseif Chess.isdraw(board)
             println("\nDraw!")
@@ -226,7 +221,7 @@ function play_demo_game(genes::Vector{Float64}, config::GAConfig)
         println(io, "[Site \"Localhost\"]")
         println(io, "[White \"BestBot\"]")
         println(io, "[Black \"BestBot\"]")
-        println(io, "[Result \"*\"]") # Gwiazdka oznacza nieznany/inny wynik, można edytować ręcznie
+        println(io, "[Result \"*\"]") 
         println(io, "")
         println(io, pgn_string)
     end

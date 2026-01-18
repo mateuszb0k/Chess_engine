@@ -49,7 +49,6 @@ function compute_hash(board::Chess.Board)
                 h = xor(h,PIECE_KEYS[idx,i])
             end
         end
-
     end
     if Chess.sidetomove(board) == BLACK
         h=xor(h,SIDE_KEY)

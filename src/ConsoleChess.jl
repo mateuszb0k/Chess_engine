@@ -11,7 +11,7 @@ using .EvaluationFunction
 
 function play_simple()
     #weights
-    txt_dir = "best_weights_t2.txt"
+    txt_dir = "best_weights6.txt"
     if isfile(txt_dir)
         println("Loading weights from best_weights.txt")
         new_weights = EvaluationFunction.load_weights_from_txt(txt_dir)

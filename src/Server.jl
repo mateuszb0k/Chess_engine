@@ -6,7 +6,7 @@ include("Search.jl")
 include("EvaluationFunction.jl")
 using .Search
 using .EvaluationFunction
-dir = "resources/weights/best_weights_t2.txt"
+dir = "resources/weights/best_weights6.txt"
 if isfile(dir)
    weights = EvaluationFunction.load_weights_from_txt(dir)
    println("Weights loaded")
@@ -34,7 +34,7 @@ function handle_request(req::HTTP.Request)
 
         data = JSON.parse(body)
         fen = data["fen"]
-        depth =get(data,"depth",5)
+        depth =get(data,"depth",6)
         println("Got FEN: $fen")
         board = Chess.fromfen(fen)
         score,best_move = Search.search_parallel(board,depth,use_book=true,verbose=false)
