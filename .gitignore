@@ -5,4 +5,4 @@ src/UCI.jl
 src/run_engine.sh
 src/gui_debug.log
 src/debug_uci.txt
-frontend/
+frontend/node_modules/
